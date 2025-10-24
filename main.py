@@ -1,60 +1,70 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
 
+# ضع توكن البوت هنا
 TOKEN = "8062785436:AAGXTkPTQgogdjNJgJP92ofv7Zi-Z5O_lGI"
 CASINO_URL = "https://stellular-caramel-a5a325.netlify.app/"
 
-# أمر البدء
+# قاعدة بيانات مؤقتة داخلية (يمكن لاحقًا ربطها بملف JSON أو قاعدة بيانات حقيقية)
+players = {}
+
+# بدء البوت
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    username = update.effective_user.username or "لا يوجد اسم"
+    
+    if user_id not in players:
+        players[user_id] = {
+            "name": username,
+            "balance": 1000,  # الرصيد الافتراضي
+            "tasks": []
+        }
+
     keyboard = [
-        [InlineKeyboardButton("🎰 دخول إلى الكازينو", url=CASINO_URL)],
-        [InlineKeyboardButton("💰 المهام والرصيد", callback_data="tasks")]
+        [InlineKeyboardButton("🎰 فتح الكازينو", url=CASINO_URL)],
+        [InlineKeyboardButton("💰 عرض الرصيد والمهام", callback_data="show_balance")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
+
     await update.message.reply_text(
-        "👋 أهلاً بك في Ocean Casino!\nاختر أحد الخيارات بالأسفل:",
+        f"👋 أهلاً {players[user_id]['name']}!\n"
+        "اختر ما تريد من الخيارات أدناه:",
         reply_markup=reply_markup
     )
 
-# قائمة المهام
-async def tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# معالجة الأزرار
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    tasks_text = (
-        "💼 قائمة المهام اليومية:\n"
-        "1️⃣ تابع قناتنا الرسمية واحصل على 10 نقاط.\n"
-        "2️⃣ انشر رابط الدعوة لأصدقائك واربح 5 نقاط لكل تسجيل.\n"
-        "3️⃣ يمكن شحن الرصيد بعملات رقمية عبر الموقع.\n\n"
-        f"🔗 رابط الدعوة الخاص بك: https://t.me/OceanMiningbot?start={query.from_user.id}"
-    )
-    keyboard = [[InlineKeyboardButton("⬅️ رجوع", callback_data="back")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(text=tasks_text, reply_markup=reply_markup)
+    user_id = query.from_user.id
 
-# رجوع للقائمة الرئيسية
-async def back(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    keyboard = [
-        [InlineKeyboardButton("🎰 دخول إلى الكازينو", url=CASINO_URL)],
-        [InlineKeyboardButton("💰 المهام والرصيد", callback_data="tasks")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(
-        text="👋 عدت إلى القائمة الرئيسية!",
-        reply_markup=reply_markup
-    )
+    if query.data == "show_balance":
+        player = players.get(user_id)
+        if player:
+            tasks_text = "\n".join([f"- {t}" for t in player["tasks"]]) or "لا توجد مهام بعد."
+            await query.message.reply_text(
+                f"💰 رصيدك: {player['balance']} نقاط\n"
+                f"📝 المهام:\n{tasks_text}"
+            )
+        else:
+            await query.message.reply_text("❌ لم يتم العثور على بياناتك.")
+
+# إضافة مهمة (مثال: يمكن أن تضيف زر آخر في المستقبل لإضافة مهام)
+async def add_task(user_id: int, task_name: str):
+    if user_id in players:
+        players[user_id]["tasks"].append(task_name)
+        return True
+    return False
 
 # تشغيل البوت
-async def main():
+def main():
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(tasks, pattern="tasks"))
-    app.add_handler(CallbackQueryHandler(back, pattern="back"))
-    await app.run_polling()
+    app.add_handler(CallbackQueryHandler(button_handler))
+    app.run_polling()
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    main()
+
 
 
