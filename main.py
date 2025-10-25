@@ -7,7 +7,7 @@ from telegram.ext import (
     ContextTypes,
 )
 
-TOKEN = "ضع هنا توكن البوت الخاص بك"
+TOKEN = "8062785436:AAGXTkPTQgogdjNJgJP92ofv7Zi-Z5O_lGI"
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -44,6 +44,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
